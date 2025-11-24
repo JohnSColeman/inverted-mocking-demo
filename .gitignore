@@ -1,0 +1,16 @@
+### Node template
+# Logs
+logs
+*.log
+
+# Generated JavaScript
+dist/
+
+# Dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# IntelliJ
+/.idea/
