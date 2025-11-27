@@ -120,7 +120,6 @@ services:
     container_name: inverted-mocking-temporal
     ports:
       - "7233:7233"  # gRPC
-      - "8080:8080"  # Web UI
     environment:
       - DB=postgresql
       - DB_PORT=5432
@@ -128,6 +127,8 @@ services:
       - POSTGRES_PWD=temporal
       - POSTGRES_SEEDS=temporal-postgres
       - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/temporal_dynamic_config.json
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
     volumes:
       - ./docker/temporal/temporal_dynamic_config.json:/etc/temporal/temporal_dynamic_config.json
     depends_on:
@@ -140,6 +141,32 @@ services:
       retries: 10
     networks:
       - app-network
+
+  temporal-admin-tools:
+    image: temporalio/admin-tools:latest
+    container_name: inverted-mocking-temporal-admin-tools
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+    networks:
+      - app-network
+    stdin_open: true
+    tty: true
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    container_name: inverted-mocking-temporal-ui
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    networks:
+      - app-network
+    ports:
+      - 8080:8080
 
   # Temporal PostgreSQL (separate from application database)
   temporal-postgres:
