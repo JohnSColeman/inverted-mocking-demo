@@ -1,0 +1,20 @@
+{
+  "system.enableActivityLocalDispatch": [
+    {
+      "value": true,
+      "constraints": {}
+    }
+  ],
+  "history.maxAutoResetPoints": [
+    {
+      "value": 20,
+      "constraints": {}
+    }
+  ],
+  "limit.maxIDLength": [
+    {
+      "value": 255,
+      "constraints": {}
+    }
+  ]
+}

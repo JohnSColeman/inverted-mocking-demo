@@ -4,40 +4,36 @@
  * These functions take values and return values. No effects whatsoever.
  * They are trivial to test - just call them with inputs and check outputs.
  * No mocking required at all.
+ *
+ * Note that for simplicity currency and correct decimal precision are not
+ * integrated into calculations with prices.
  */
 
 import {
-  CacheEntry,
   Customer,
   DiscountRule,
   ItemSummary,
-  NotificationPayload,
   Order,
   ProcessedOrder,
   Product,
 } from '../domain';
+import {CacheEntry, NotificationPayload} from "../types";
+import {AnalyticsEvent, InventoryUpdate, LineItem, MissingProductAlert} from "./types";
+import {Maybe} from "purify-ts";
 
 // ============================================================================
 // Core Calculations
 // ============================================================================
 
-export type LineItem = {
-  productId: string;
-  productName: string;
-  quantity: number;
-  pricePerUnit: number;
-  lineTotal: number;
-};
-
 export function calculateLineItems(
   order: Order,
-  products: Map<string, Product>
-): { items: LineItem[]; missingProductIds: string[] } {
+  products: Record<string, Product>
+): { items: LineItem[]; missingProductIds: Maybe<string[]> } {
   const items: LineItem[] = [];
   const missingProductIds: string[] = [];
 
   for (const orderItem of order.items) {
-    const product = products.get(orderItem.productId);
+    const product = products[orderItem.productId];
     
     if (!product) {
       missingProductIds.push(orderItem.productId);
@@ -52,8 +48,7 @@ export function calculateLineItems(
       lineTotal: orderItem.quantity * orderItem.pricePerUnit,
     });
   }
-
-  return { items, missingProductIds };
+  return { items, missingProductIds: Maybe.fromPredicate(a => a.length > 0, missingProductIds) };
 }
 
 export function calculateSubtotal(lineItems: LineItem[]): number {
@@ -133,11 +128,6 @@ export function toProcessedOrder(
 // Inventory Updates
 // ============================================================================
 
-export type InventoryUpdate = {
-  productId: string;
-  quantityChange: number;
-};
-
 export function calculateInventoryUpdates(lineItems: LineItem[]): InventoryUpdate[] {
   return lineItems.map(item => ({
     productId: item.productId,
@@ -176,13 +166,6 @@ export function buildCacheEntry(processed: ProcessedOrder): CacheEntry {
   };
 }
 
-export type AnalyticsEvent = {
-  event: string;
-  orderId: string;
-  total: number;
-  customerTier: Customer['tier'];
-};
-
 export function buildAnalyticsEvent(
   processed: ProcessedOrder,
   customerTier: Customer['tier']
@@ -194,12 +177,6 @@ export function buildAnalyticsEvent(
     customerTier,
   };
 }
-
-export type MissingProductAlert = {
-  type: 'missing_product';
-  productId: string;
-  orderId: string;
-};
 
 export function buildMissingProductAlerts(
   orderId: string,

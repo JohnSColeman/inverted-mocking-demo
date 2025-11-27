@@ -30,7 +30,7 @@ export interface CustomerRepository {
 }
 
 export interface ProductRepository {
-  getByIds(ids: string[]): Promise<Map<string, Product>>;
+  getByIds(ids: string[]): Promise<Record<string, Product>>;
   updateInventory(updates: InventoryUpdate[]): Promise<void>;
 }
 
@@ -70,63 +70,4 @@ export type AppEffects = {
   notifications: NotificationService;
   monitoring: MonitoringService;
   analytics: AnalyticsService;
-}
-
-// ============================================================================
-// Production Implementations
-// 
-// In real code, these would connect to actual databases, HTTP services, etc.
-// ============================================================================
-
-export function createProductionEffects(): AppEffects {
-  // These would be real implementations
-  return {
-    orders: {
-      async getById(_id: string): Promise<Order | null> {
-        // Real: query database
-        throw new Error('Implement with real database');
-      },
-    },
-    customers: {
-      async getById(_id: string): Promise<Customer | null> {
-        throw new Error('Implement with real database');
-      },
-      async updateTotalPurchases(_customerId: string, _amount: number): Promise<void> {
-        throw new Error('Implement with real database');
-      },
-    },
-    products: {
-      async getByIds(_ids: string[]): Promise<Map<string, Product>> {
-        throw new Error('Implement with real database');
-      },
-      async updateInventory(_updates: InventoryUpdate[]): Promise<void> {
-        throw new Error('Implement with real database');
-      },
-    },
-    pricing: {
-      async getDiscountRules(): Promise<DiscountRule[]> {
-        throw new Error('Implement with HTTP client');
-      },
-    },
-    cache: {
-      async set(_entry: CacheEntry): Promise<void> {
-        throw new Error('Implement with Redis client');
-      },
-    },
-    notifications: {
-      async sendEmail(_payload: NotificationPayload): Promise<void> {
-        throw new Error('Implement with email service');
-      },
-    },
-    monitoring: {
-      async sendAlerts(_alerts: MissingProductAlert[]): Promise<void> {
-        throw new Error('Implement with monitoring service');
-      },
-    },
-    analytics: {
-      async trackEvent(_event: AnalyticsEvent): Promise<void> {
-        throw new Error('Implement with analytics service');
-      },
-    },
-  };
 }

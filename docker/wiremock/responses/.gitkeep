@@ -1,0 +1,2 @@
+# This directory stores static response files for WireMock
+# Place JSON, XML, or text files here to be used in WireMock mappings

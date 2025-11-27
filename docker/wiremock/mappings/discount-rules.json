@@ -1,0 +1,44 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/api/discount-rules"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": [
+      {
+        "tier": "standard",
+        "minPurchase": 0,
+        "discountPercent": 0
+      },
+      {
+        "tier": "standard",
+        "minPurchase": 100,
+        "discountPercent": 5
+      },
+      {
+        "tier": "premium",
+        "minPurchase": 0,
+        "discountPercent": 10
+      },
+      {
+        "tier": "premium",
+        "minPurchase": 200,
+        "discountPercent": 15
+      },
+      {
+        "tier": "vip",
+        "minPurchase": 0,
+        "discountPercent": 20
+      },
+      {
+        "tier": "vip",
+        "minPurchase": 500,
+        "discountPercent": 25
+      }
+    ]
+  }
+}

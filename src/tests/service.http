@@ -1,0 +1,8 @@
+### Health check
+GET http://localhost:3000/health
+
+### Process order
+POST http://localhost:3000/api/orders/order-001/process
+
+### Process order status
+GET http://localhost:3000/api/orders/order-001/status

@@ -1,0 +1,222 @@
+services:
+  # 1. PostgreSQL Database for Orders, Customers, and Products
+  postgres:
+    image: postgres:16-alpine
+    container_name: inverted-mocking-postgres
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppassword
+      POSTGRES_DB: orderdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d orderdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # 2. API Mocking Solution for Pricing Service (using WireMock)
+  pricing-api-mock:
+    image: wiremock/wiremock:3.3.1
+    container_name: inverted-mocking-pricing-api
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./docker/wiremock/mappings:/home/wiremock/mappings
+      - ./docker/wiremock/responses:/home/wiremock/__files
+    command: ["--global-response-templating", "--verbose"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-s", "http://localhost:8080/__admin/mappings"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - app-network
+
+  # 3. Redis for Cache Service
+  redis:
+    image: redis:7-alpine
+    container_name: inverted-mocking-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app-network
+
+  # 4. Email Server Mock for Testing (using MailHog)
+  mailhog:
+    image: mailhog/mailhog:latest
+    platform: linux/amd64
+    container_name: inverted-mocking-mailhog
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8025/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - app-network
+
+  # 5. Monitoring Service (LocalStack for AWS CloudWatch simulation)
+  localstack-monitoring:
+    image: localstack/localstack:3.0
+    container_name: inverted-mocking-monitoring
+    ports:
+      - "4566:4566"  # LocalStack gateway
+      - "4571:4571"  # Legacy port for CloudWatch
+    environment:
+      SERVICES: cloudwatch,sns,sqs
+      DEBUG: 1
+      EXTRA_CORS_ALLOWED_ORIGINS: "*"
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    volumes:
+      - ./docker/localstack/init-monitoring.sh:/etc/localstack/init/ready.d/init-monitoring.sh
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # 6. Analytics Service (LocalStack for AWS Kinesis/Firehose simulation)
+  localstack-analytics:
+    image: localstack/localstack:3.0
+    container_name: inverted-mocking-analytics
+    ports:
+      - "4567:4566"  # Different external port to avoid conflict
+    environment:
+      SERVICES: kinesis,firehose,s3
+      DEBUG: 1
+      EXTRA_CORS_ALLOWED_ORIGINS: "*"
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    volumes:
+      - ./docker/localstack/init-analytics.sh:/etc/localstack/init/ready.d/init-analytics.sh
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # 7. Temporal Server
+  temporal:
+    image: temporalio/auto-setup:1.22.0
+    container_name: inverted-mocking-temporal
+    ports:
+      - "7233:7233"  # gRPC
+      - "8080:8080"  # Web UI
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=temporal-postgres
+      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/temporal_dynamic_config.json
+    volumes:
+      - ./docker/temporal/temporal_dynamic_config.json:/etc/temporal/temporal_dynamic_config.json
+    depends_on:
+      temporal-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "tctl --address $(hostname -i):7233 cluster health | grep SERVING"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  # Temporal PostgreSQL (separate from application database)
+  temporal-postgres:
+    image: postgres:16-alpine
+    container_name: inverted-mocking-temporal-postgres
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # 8. Node.js Application Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: inverted-mocking-app
+    ports:
+      - "3000:3000"
+    environment:
+      # Database
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: appuser
+      DATABASE_PASSWORD: apppassword
+      DATABASE_NAME: orderdb
+      
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      
+      # Temporal
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      
+      # Pricing API Mock
+      PRICING_API_URL: http://pricing-api-mock:8080
+      
+      # Email (SMTP)
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      
+      # AWS Services (LocalStack)
+      AWS_ENDPOINT_MONITORING: http://localstack-monitoring:4566
+      AWS_ENDPOINT_ANALYTICS: http://localstack-analytics:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      
+      # Node
+      NODE_ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      mailhog:
+        condition: service_healthy
+      pricing-api-mock:
+        condition: service_healthy
+      localstack-monitoring:
+        condition: service_healthy
+      localstack-analytics:
+        condition: service_healthy
+    command: npm run start
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

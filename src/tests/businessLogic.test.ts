@@ -17,14 +17,15 @@ import {
   calculateSubtotal,
   findApplicableDiscount,
   toProcessedOrder,
-} from '../after/businessLogic';
+} from '../pure/businessLogic';
+import {Maybe} from "purify-ts";
 
 
 describe('calculateLineItems', () => {
-  const products = new Map<string, Product>([
-    ['prod-1', { id: 'prod-1', name: 'Widget', stock: 100, category: 'electronics' }],
-    ['prod-2', { id: 'prod-2', name: 'Gadget', stock: 50, category: 'electronics' }],
-  ]);
+  const products: Record<string, Product> = {
+    'prod-1': { id: 'prod-1', name: 'Widget', stock: 100, category: 'electronics' },
+    'prod-2': { id: 'prod-2', name: 'Gadget', stock: 50, category: 'electronics' },
+  };
 
   it('calculates line totals correctly', () => {
     const order: Order = {
@@ -42,7 +43,7 @@ describe('calculateLineItems', () => {
     expect(items).toHaveLength(2);
     expect(items[0].lineTotal).toBe(20); // 2 * 10
     expect(items[1].lineTotal).toBe(60); // 3 * 20
-    expect(missingProductIds).toHaveLength(0);
+    expect(missingProductIds).toEqual(Maybe.empty());
   });
 
   it('identifies missing products', () => {
@@ -59,7 +60,7 @@ describe('calculateLineItems', () => {
     const { items, missingProductIds } = calculateLineItems(order, products);
 
     expect(items).toHaveLength(1);
-    expect(missingProductIds).toEqual(['missing-prod']);
+    expect(missingProductIds).toEqual(Maybe.of(['missing-prod']));
   });
 
   it('handles empty orders', () => {
@@ -73,7 +74,7 @@ describe('calculateLineItems', () => {
     const { items, missingProductIds } = calculateLineItems(order, products);
 
     expect(items).toHaveLength(0);
-    expect(missingProductIds).toHaveLength(0);
+    expect(missingProductIds).toBe(Maybe.empty());
   });
 });
 

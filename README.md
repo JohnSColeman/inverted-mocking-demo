@@ -1,6 +1,7 @@
 # Inverted Mocking in TypeScript
 
-This project demonstrates the "inverted mocking" pattern from [Matt Parsons' article](https://www.parsonsmatt.org/2017/07/27/inverted_mocking.html), applied to TypeScript.
+This project demonstrates the "inverted mocking" pattern from [Matt Parsons' article](https://www.parsonsmatt.org/2017/07/27/inverted_mocking.html), applied to TypeScript
+as well using Temporal to assure effects are durable so processes can recover and complete.
 
 ## The Problem
 
@@ -74,7 +75,7 @@ test('VIP gets double points', () => {
 Instead of mocking SQL, create simple interfaces:
 
 ```typescript
-// effects.ts
+// effects.d.ts
 interface OrderRepository {
   getById(id: string): Promise<Order | null>;
 }
@@ -90,68 +91,77 @@ These are vastly easier to mock than a full database!
 ### 3. Thin Coordinator (Just Plumbing)
 
 ```typescript
-// orderProcessor.ts
-import { Either, EitherAsync, Left, Right } from 'purify-ts';
+// orderProcessing.ts
+export function processOrder(
+    orderId: string
+): (appEffects: AppEffects) => Promise<Either<unknown[], ProcessedOrder>> {
+    return async (appEffects: AppEffects) => {
+        // ========== GATHER INPUTS (Effects) ==========
 
-function processOrder(orderId: string): (effects: AppEffects) => Promise<Either<string, ProcessedOrder>> {
-  return async (effects: AppEffects) => {
-    // Gather inputs - return Left on error instead of throwing
-    const order = await effects.orders.getById(orderId);
-    if (!order) {
-      return Left(`Order ${orderId} not found`);
-    }
-    
-    const customer = await effects.customers.getById(order.customerId);
-    if (!customer) {
-      return Left(`Customer ${order.customerId} not found`);
-    }
-    
-    const products = await effects.products.getByIds(productIds);
-    const discountRules = await effects.pricing.getDiscountRules();
-    
-    // Pure business logic - all calculations happen here
-    const lineItems = calculateLineItems(order, products);
-    const discountRule = findApplicableDiscount(discountRules, customer.tier, subtotal);
-    const processedOrder = toProcessedOrder(order, customer, lineItems, discountRule);
-    
-    // Critical effects - must succeed for order to be processed
-    const criticalEffects = await Promise.all([
-      EitherAsync(() => effects.products.updateInventory(inventoryUpdates))
-        .mapLeft(err => `Failed to update inventory: ${err}`),
-      EitherAsync(() => effects.customers.updateTotalPurchases(customer.id, processedOrder.total))
-        .mapLeft(err => `Failed to update customer purchases: ${err}`),
-    ]);
-    
-    // Check if any critical effect failed
-    const criticalFailure = criticalEffects.find(result => result.isLeft());
-    if (criticalFailure) {
-      return criticalFailure as Either<string, ProcessedOrder>;
-    }
-    
-    // Optional effects - fire and forget, log but don't fail the order
-    const optionalEffects = [
-      EitherAsync(() => effects.cache.set(cacheEntry)),
-      EitherAsync(() => effects.notifications.sendEmail(emailPayload)),
-      EitherAsync(() => effects.analytics.trackEvent(analyticsEvent)),
-    ];
-    
-    // Execute optional effects without blocking
-    Promise.all(optionalEffects.map(effect => effect.run())).then(results => {
-      results.forEach(result => {
-        if (result.isLeft()) {
-          console.warn('Optional effect failed:', result.extract());
+        const order = await appEffects.orders.getById(orderId);
+        if (!order) {
+            return Left([`Order ${orderId} not found`]);
         }
-      });
-    });
-    
-    return Right(processedOrder);
-  };
+
+        const customer = await appEffects.customers.getById(order.customerId);
+        if (!customer) {
+            return Left([`Customer ${order.customerId} not found`]);
+        }
+
+        const productIds = order.items.map(item => item.productId);
+        const [products, discountRules] = await Promise.all([
+            appEffects.products.getByIds(productIds),
+            appEffects.pricing.getDiscountRules(),
+        ]);
+
+        // ========== PURE BUSINESS LOGIC (No Effects) ==========
+
+        // Calculate line items and identify missing products
+        const {items: lineItems, missingProductIds} = calculateLineItems(order, products);
+
+        // Find applicable discount
+        const discountRule = findApplicableDiscount(
+            discountRules,
+            customer.tier,
+            lineItems.reduce((sum, item) => sum + item.lineTotal, 0)
+        );
+
+        // Build the processed order (all the core calculations happen here)
+        const processedOrder = toProcessedOrder(order, customer, lineItems, discountRule);
+
+        // Prepare all output data
+        const inventoryUpdates = calculateInventoryUpdates(lineItems);
+        const emailPayload = buildConfirmationEmail(customer, processedOrder);
+        const cacheEntry = buildCacheEntry(processedOrder);
+        const analyticsEvent = buildAnalyticsEvent(processedOrder, customer.tier);
+        const missingProductAlerts = missingProductIds
+            .map(ids => buildMissingProductAlerts(orderId, ids));
+
+        // ========== PERFORM OUTPUTS (Effects) ==========
+
+        const effects = [
+            () => appEffects.products.updateInventory(inventoryUpdates),
+            () => appEffects.customers.updateTotalPurchases(customer.id, processedOrder.total),
+            () => appEffects.cache.set(cacheEntry),
+            () => appEffects.notifications.sendEmail(emailPayload),
+            () => appEffects.analytics.trackEvent(analyticsEvent),
+            ...missingProductAlerts
+                .map(alerts => [() => appEffects.monitoring.sendAlerts(alerts)])
+                .orDefault([])
+        ];
+
+        // Execute all effects and return either the failures or the processed order
+        const results = await Promise.all(effects.map(e => EitherAsync(e).run()));
+        const errors = Either.lefts(results);
+        return errors.length > 0 ? Left(errors)
+            : Right(processedOrder);
+    };
 }
 
 // Usage:
 const result = await processOrder('order-123')(effects);
 result.ifRight(order => console.log('Success:', order));
-result.ifLeft(error => console.error('Error:', error));
+result.ifLeft(errors => console.error('Error:', errors));
 ```
 
 **Key Design Decision: Critical vs Optional Effects**
@@ -162,23 +172,6 @@ Not all effects are equal! The code distinguishes between:
 - **Optional Effects** (cache, email, analytics): Failures are logged but don't fail the order
 
 This prevents scenarios like "order succeeded but customer didn't get email, so we rolled everything back."
-
-## Project Structure
-
-```
-src/
-├── types.ts                    # Shared domain types
-├── before/
-│   ├── orderProcessor.ts       # ❌ The problematic approach
-│   └── fakeDeps.ts             # Fake dependencies for compilation
-├── after/
-│   ├── businessLogic.ts        # ✅ Pure functions - no effects
-│   ├── effects.ts              # ✅ Simple effect interfaces
-│   └── orderProcessor.ts       # ✅ Thin coordinator
-└── tests/
-    ├── businessLogic.test.ts   # Pure function tests - NO MOCKS
-    └── integration.test.ts     # Coordinator tests - simple mocks
-```
 
 ## Running the Tests
 
@@ -219,7 +212,8 @@ function processOrder(
 ) { ... }
 ```
 
-Instead, group related effects into interfaces (`AppEffects`) and pass that single object. This gives you the same testability without the parameter explosion.
+Instead, group related effects into interfaces (`AppEffects`) and pass that single object. This gives you the same 
+testability without the parameter explosion.
 
 ## Further Reading
 

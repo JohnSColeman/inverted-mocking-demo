@@ -50,14 +50,3 @@ export type ItemSummary = {
   lineTotal: number;
 };
 
-export type NotificationPayload = {
-  to: string;
-  subject: string;
-  body: string;
-};
-
-export type CacheEntry = {
-  key: string;
-  value: string;
-  ttlSeconds: number;
-};
