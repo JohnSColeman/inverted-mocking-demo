@@ -8,8 +8,8 @@
  * (e.g., getOrderById, getCustomerById instead of just getById)
  */
 
-import { Order, Customer, Product, DiscountRule, CacheEntry, NotificationPayload } from '../domain';
-import { AnalyticsEvent, InventoryUpdate, MissingProductAlert } from '../pure/types';
+import {CacheEntry, Customer, DiscountRule, NotificationPayload, Order, Product} from '../domain';
+import {AnalyticsEvent, InventoryUpdate, MissingProductAlert} from '../pure/types';
 
 // Flattened activities interface that matches worker.ts registration
 export interface Activities {

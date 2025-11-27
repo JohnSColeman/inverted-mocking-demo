@@ -10,7 +10,7 @@
  * logic lives in businessLogic.ts where it's trivially testable.
  */
 
-import {Either, EitherAsync, Left, NonEmptyList, Right} from 'purify-ts';
+import {Either, EitherAsync, Left, Right} from 'purify-ts';
 import {ProcessedOrder} from '../domain';
 import {AppEffects} from './effects';
 import {

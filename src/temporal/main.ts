@@ -7,9 +7,9 @@
  * 
  * Run this with: npm run worker
  */
-import { makeAppEffects } from '../effects/EffectsFactory';
-import { runWorker } from './worker';
-import { processOrderAsync, getOrderProcessingStatus } from './client';
+import {makeAppEffects} from '../effects/EffectsFactory';
+import {runWorker} from './worker';
+import {getOrderProcessingStatus, processOrderAsync} from './client';
 import express from 'express';
 
 async function main() {

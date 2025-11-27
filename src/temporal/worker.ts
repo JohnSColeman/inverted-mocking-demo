@@ -10,9 +10,9 @@
  * with your effect implementations since they already have the right
  * method signatures (async functions returning Promises).
  */
-import { AppEffects } from '../pure/effects';
+import {AppEffects} from '../pure/effects';
 import {Activities} from "./activities";
-import { NativeConnection, Worker } from '@temporalio/worker';
+import {NativeConnection, Worker} from '@temporalio/worker';
 
 /**
  * Create and start a Temporal worker

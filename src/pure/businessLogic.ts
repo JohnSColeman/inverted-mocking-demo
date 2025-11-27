@@ -9,14 +9,7 @@
  * integrated into calculations with prices.
  */
 
-import {
-  Customer,
-  DiscountRule,
-  ItemSummary,
-  Order,
-  ProcessedOrder,
-  Product,
-} from '../domain';
+import {Customer, DiscountRule, ItemSummary, Order, ProcessedOrder, Product,} from '../domain';
 import {CacheEntry, NotificationPayload} from "../types";
 import {AnalyticsEvent, InventoryUpdate, LineItem, MissingProductAlert} from "./types";
 import {Maybe} from "purify-ts";

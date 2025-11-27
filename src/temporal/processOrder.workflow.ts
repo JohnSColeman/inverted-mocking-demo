@@ -10,12 +10,12 @@
  * 2. Makes activity names explicit and unique
  * 3. Simplifies the worker registration code
  */
-import { ProcessedOrder } from '../domain';
-import { processOrder } from '../pure/orderProcessing';
-import type { AppEffects } from '../pure/effects';
-import { Activities } from './activities';
-import { ActivityOptions, proxyActivities } from '@temporalio/workflow';
-import { Either } from 'purify-ts';
+import {ProcessedOrder} from '../domain';
+import {processOrder} from '../pure/orderProcessing';
+import type {AppEffects} from '../pure/effects';
+import {Activities} from './activities';
+import {ActivityOptions, proxyActivities} from '@temporalio/workflow';
+import {Either} from 'purify-ts';
 
 const databaseActivityOptions: ActivityOptions = {
   startToCloseTimeout: '120s',
