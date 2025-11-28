@@ -1,7 +1,7 @@
 # Inverted Mocking in TypeScript
 
 This project demonstrates the "inverted mocking" pattern from [Matt Parsons' article](https://www.parsonsmatt.org/2017/07/27/inverted_mocking.html), applied to TypeScript
-as well using Temporal to assure effects are durable so processes can recover and complete.
+as well using [Temporal](https://temporal.io/) to assure effects are durable so processes can recover and complete.
 
 ## The Problem
 
