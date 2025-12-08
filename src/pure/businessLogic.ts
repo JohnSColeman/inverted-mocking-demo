@@ -59,7 +59,7 @@ export function calculateSubtotal(lineItems: LineItem[]): number {
 
 export function findApplicableDiscount(
   rules: DiscountRule[],
-  customerTier: Customer['tier'],
+  customerTier: CustomerTier,
   subtotal: number
 ): DiscountRule | null {
   return rules
