@@ -177,7 +177,7 @@ describe('processOrder integration', () => {
     result.ifRight(order => {
       // Only prod-1 should be in the result
       expect(order.itemsSummary).toHaveLength(1);
-      expect(order.itemsSummary[0].productId).toBe('prod-1');
+      expect(order.itemsSummary[0]!.productId).toBe('prod-1');
     });
     
     // Should send alert for missing product

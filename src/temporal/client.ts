@@ -66,8 +66,8 @@ export async function startOrderProcessing(
 ) {
   const temporalClient = await getTemporalClient();
   
-  // Start the workflow
-  return await temporalClient.workflow.start(processOrderWorkflow, {
+  // Build workflow options - only include timeout if explicitly provided
+  const workflowOptions: any = {
     // Unique ID for this workflow execution
     // Using orderId ensures we don't process the same order twice
     workflowId: options?.workflowId || `order-${orderId}`,
@@ -77,10 +77,15 @@ export async function startOrderProcessing(
 
     // Workflow arguments
     args: [orderId],
+  };
 
-    // Optional: Set a timeout for the entire workflow
-    workflowExecutionTimeout: options?.workflowExecutionTimeoutMs,
-  });
+  // Optional: Set a timeout for the entire workflow (only if provided)
+  if (options?.workflowExecutionTimeoutMs !== undefined) {
+    workflowOptions.workflowExecutionTimeout = options.workflowExecutionTimeoutMs;
+  }
+  
+  // Start the workflow
+  return await temporalClient.workflow.start(processOrderWorkflow, workflowOptions);
 }
 
 /**

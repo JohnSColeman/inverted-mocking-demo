@@ -79,7 +79,7 @@ async function startApiServer(): Promise<void> {
       
       console.log(`✅ Order processing started for ${orderId} (workflow: ${result.workflowId})`);
       
-      res.status(202).json({
+      return res.status(202).json({
         message: 'Order processing started',
         orderId,
         workflowId: result.workflowId,
@@ -98,7 +98,7 @@ async function startApiServer(): Promise<void> {
         });
       }
       
-      res.status(500).json({ 
+      return res.status(500).json({ 
         error: 'Failed to start order processing',
         details: error.message,
       });
@@ -122,13 +122,13 @@ async function startApiServer(): Promise<void> {
     try {
       const status = await getOrderProcessingStatus(orderId);
       
-      res.json({
+      return res.json({
         orderId,
         ...status,
       });
     } catch (error: any) {
       console.error(`❌ Failed to get status for ${orderId}:`, error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         error: 'Failed to get order status',
         details: error.message,
       });

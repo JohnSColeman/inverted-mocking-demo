@@ -41,8 +41,8 @@ describe('calculateLineItems', () => {
     const { items, missingProductIds } = calculateLineItems(order, products);
 
     expect(items).toHaveLength(2);
-    expect(items[0].lineTotal).toBe(20); // 2 * 10
-    expect(items[1].lineTotal).toBe(60); // 3 * 20
+    expect(items[0]!.lineTotal).toBe(20); // 2 * 10
+    expect(items[1]!.lineTotal).toBe(60); // 3 * 20
     expect(missingProductIds).toEqual(Maybe.empty());
   });
 
