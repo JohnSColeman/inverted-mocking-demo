@@ -9,7 +9,7 @@
  * integrated into calculations with prices.
  */
 
-import {Customer, DiscountRule, ItemSummary, Order, ProcessedOrder, Product,} from '../domain';
+import {Customer, CustomerTier, DiscountRule, ItemSummary, Order, ProcessedOrder, Product,} from '../domain';
 import {CacheEntry, NotificationPayload} from "../types";
 import {AnalyticsEvent, InventoryUpdate, LineItem, MissingProductAlert} from "./types";
 import {Maybe} from "purify-ts";
@@ -75,20 +75,18 @@ export function calculateDiscount(
   return subtotal * (rule.discountPercent / 100);
 }
 
+const loyaltyPointsStrategies: Record<CustomerTier, (basePoints: number) => number> = {
+  vip: (basePoints) => basePoints * 2,
+  premium: (basePoints) => Math.floor(basePoints * 1.5),
+  standard: (basePoints) => basePoints,
+};
+
 export function calculateLoyaltyPoints(
   total: number,
-  customerTier: Customer['tier']
+  customerTier: CustomerTier
 ): number {
   const basePoints = Math.floor(total / 10);
-  
-  switch (customerTier) {
-    case 'vip':
-      return basePoints * 2;
-    case 'premium':
-      return Math.floor(basePoints * 1.5);
-    default:
-      return basePoints;
-  }
+  return loyaltyPointsStrategies[customerTier](basePoints);
 }
 
 // ============================================================================

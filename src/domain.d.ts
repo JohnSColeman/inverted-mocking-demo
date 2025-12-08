@@ -13,10 +13,11 @@ export type OrderItem = {
   readonly pricePerUnit: number;
 };
 
+export type CustomerTier = 'standard' | 'premium' | 'vip'
 export type Customer = {
   readonly id: string;
   readonly email: string;
-  readonly tier: 'standard' | 'premium' | 'vip';
+  readonly tier: CustomerTier;
   readonly totalPurchases: number;
 };
 
@@ -28,7 +29,7 @@ export type Product = {
 };
 
 export type DiscountRule = {
-  readonly tier: Customer['tier'];
+  readonly tier: CustomerTier;
   readonly minPurchase: number;
   readonly discountPercent: number;
 };
