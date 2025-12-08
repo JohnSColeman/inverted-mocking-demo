@@ -1,13 +1,13 @@
 // Non domain types
 
 export type NotificationPayload = {
-    to: string;
-    subject: string;
-    body: string;
+    readonly to: string;
+    readonly subject: string;
+    readonly body: string;
 };
 
 export type CacheEntry = {
-    key: string;
-    value: string;
-    ttlSeconds: number;
+    readonly key: string;
+    readonly value: string;
+    readonly ttlSeconds: number;
 };

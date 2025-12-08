@@ -23,6 +23,7 @@ import {
     PricingService,
     ProductRepository,
 } from '../pure/effects';
+import {AwsConfig, EmailConfig, ProductionConfig} from './types';
 import {Pool} from 'pg';
 import {createClient} from 'redis';
 import nodemailer, {Transporter} from 'nodemailer';
@@ -30,48 +31,6 @@ import axios, {AxiosInstance} from 'axios';
 import {CloudWatchClient, PutMetricDataCommand} from '@aws-sdk/client-cloudwatch';
 import {PublishCommand, SNSClient} from '@aws-sdk/client-sns';
 import {KinesisClient, PutRecordCommand} from '@aws-sdk/client-kinesis';
-
-// ============================================================================
-// Configuration
-// ============================================================================
-
-interface DatabaseConfig {
-    host: string;
-    port: number;
-    user: string;
-    password: string;
-    database: string;
-}
-
-interface RedisConfig {
-    host: string;
-    port: number;
-}
-
-interface PricingConfig {
-    baseUrl: string;
-}
-
-interface EmailConfig {
-    host: string;
-    port: number;
-}
-
-interface AwsConfig {
-    region: string;
-    accessKeyId: string;
-    secretAccessKey: string;
-    monitoringEndpoint: string;
-    analyticsEndpoint: string;
-}
-
-export interface ProductionConfig {
-    database: DatabaseConfig;
-    redis: RedisConfig;
-    pricing: PricingConfig;
-    email: EmailConfig;
-    aws: AwsConfig;
-}
 
 // Load configuration from environment variables
 export function loadConfigFromEnv(): ProductionConfig {

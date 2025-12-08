@@ -1,52 +1,52 @@
 // Domain types shared across the application
 
 export type Order = {
-  id: string;
-  customerId: string;
-  items: OrderItem[];
-  createdAt: Date;
+  readonly id: string;
+  readonly customerId: string;
+  readonly items: OrderItem[];
+  readonly createdAt: Date;
 };
 
 export type OrderItem = {
-  productId: string;
-  quantity: number;
-  pricePerUnit: number;
+  readonly productId: string;
+  readonly quantity: number;
+  readonly pricePerUnit: number;
 };
 
 export type Customer = {
-  id: string;
-  email: string;
-  tier: 'standard' | 'premium' | 'vip';
-  totalPurchases: number;
+  readonly id: string;
+  readonly email: string;
+  readonly tier: 'standard' | 'premium' | 'vip';
+  readonly totalPurchases: number;
 };
 
 export type Product = {
-  id: string;
-  name: string;
-  stock: number;
-  category: string;
+  readonly id: string;
+  readonly name: string;
+  readonly stock: number;
+  readonly category: string;
 };
 
 export type DiscountRule = {
-  tier: Customer['tier'];
-  minPurchase: number;
-  discountPercent: number;
+  readonly tier: Customer['tier'];
+  readonly minPurchase: number;
+  readonly discountPercent: number;
 };
 
 export type ProcessedOrder = {
-  orderId: string;
-  customerId: string;
-  subtotal: number;
-  discount: number;
-  total: number;
-  loyaltyPointsEarned: number;
-  itemsSummary: ItemSummary[];
+  readonly orderId: string;
+  readonly customerId: string;
+  readonly subtotal: number;
+  readonly discount: number;
+  readonly total: number;
+  readonly loyaltyPointsEarned: number;
+  readonly itemsSummary: ItemSummary[];
 };
 
 export type ItemSummary = {
-  productId: string;
-  productName: string;
-  quantity: number;
-  lineTotal: number;
+  readonly productId: string;
+  readonly productName: string;
+  readonly quantity: number;
+  readonly lineTotal: number;
 };
 

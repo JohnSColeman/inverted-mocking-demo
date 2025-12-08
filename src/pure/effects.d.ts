@@ -21,37 +21,37 @@ import {AnalyticsEvent, InventoryUpdate, MissingProductAlert,} from './businessL
 // ============================================================================
 
 export interface OrderRepository {
-  getById(id: string): Promise<Order | null>;
+  readonly getById(id: string): Promise<Order | null>;
 }
 
 export interface CustomerRepository {
-  getById(id: string): Promise<Customer | null>;
-  updateTotalPurchases(customerId: string, amount: number): Promise<void>;
+  readonly getById(id: string): Promise<Customer | null>;
+  readonly updateTotalPurchases(customerId: string, amount: number): Promise<void>;
 }
 
 export interface ProductRepository {
-  getByIds(ids: string[]): Promise<Record<string, Product>>;
-  updateInventory(updates: InventoryUpdate[]): Promise<void>;
+  readonly getByIds(ids: string[]): Promise<Record<string, Product>>;
+  readonly updateInventory(updates: InventoryUpdate[]): Promise<void>;
 }
 
 export interface PricingService {
-  getDiscountRules(): Promise<DiscountRule[]>;
+  readonly getDiscountRules(): Promise<DiscountRule[]>;
 }
 
 export interface CacheService {
-  set(entry: CacheEntry): Promise<void>;
+  readonly set(entry: CacheEntry): Promise<void>;
 }
 
 export interface NotificationService {
-  sendEmail(payload: NotificationPayload): Promise<void>;
+  readonly sendEmail(payload: NotificationPayload): Promise<void>;
 }
 
 export interface MonitoringService {
-  sendAlerts(alerts: MissingProductAlert[]): Promise<void>;
+  readonly sendAlerts(alerts: MissingProductAlert[]): Promise<void>;
 }
 
 export interface AnalyticsService {
-  trackEvent(event: AnalyticsEvent): Promise<void>;
+  readonly trackEvent(event: AnalyticsEvent): Promise<void>;
 }
 
 // ============================================================================
@@ -62,12 +62,12 @@ export interface AnalyticsService {
 // ============================================================================
 
 export type AppEffects = {
-  orders: OrderRepository;
-  customers: CustomerRepository;
-  products: ProductRepository;
-  pricing: PricingService;
-  cache: CacheService;
-  notifications: NotificationService;
-  monitoring: MonitoringService;
-  analytics: AnalyticsService;
+  readonly orders: OrderRepository;
+  readonly customers: CustomerRepository;
+  readonly products: ProductRepository;
+  readonly pricing: PricingService;
+  readonly cache: CacheService;
+  readonly notifications: NotificationService;
+  readonly monitoring: MonitoringService;
+  readonly analytics: AnalyticsService;
 }

@@ -3,27 +3,27 @@
 import {Customer} from "../domain";
 
 export type LineItem = {
-    productId: string;
-    productName: string;
-    quantity: number;
-    pricePerUnit: number;
-    lineTotal: number;
+    readonly productId: string;
+    readonly productName: string;
+    readonly quantity: number;
+    readonly pricePerUnit: number;
+    readonly lineTotal: number;
 };
 
 export type InventoryUpdate = {
-    productId: string;
-    quantityChange: number;
+    readonly productId: string;
+    readonly quantityChange: number;
 };
 
 export type AnalyticsEvent = {
-    event: string;
-    orderId: string;
-    total: number;
-    customerTier: Customer['tier'];
+    readonly event: string;
+    readonly orderId: string;
+    readonly total: number;
+    readonly customerTier: Customer['tier'];
 };
 
 export type MissingProductAlert = {
-    type: 'missing_product';
-    productId: string;
-    orderId: string;
+    readonly type: 'missing_product';
+    readonly productId: string;
+    readonly orderId: string;
 };
