@@ -22,26 +22,35 @@ export function calculateLineItems(
   order: Order,
   products: Record<string, Product>
 ): { items: LineItem[]; missingProductIds: Maybe<string[]> } {
-  const items: LineItem[] = [];
-  const missingProductIds: string[] = [];
+  const result = order.items.reduce(
+    (acc, orderItem) => {
+      const product = products[orderItem.productId];
+      
+      if (!product) {
+        return {
+          ...acc,
+          missingProductIds: [...acc.missingProductIds, orderItem.productId]
+        };
+      }
 
-  for (const orderItem of order.items) {
-    const product = products[orderItem.productId];
-    
-    if (!product) {
-      missingProductIds.push(orderItem.productId);
-      continue;
-    }
-
-    items.push({
-      productId: orderItem.productId,
-      productName: product.name,
-      quantity: orderItem.quantity,
-      pricePerUnit: orderItem.pricePerUnit,
-      lineTotal: orderItem.quantity * orderItem.pricePerUnit,
-    });
-  }
-  return { items, missingProductIds: Maybe.fromPredicate(a => a.length > 0, missingProductIds) };
+      return {
+        ...acc,
+        items: [...acc.items, {
+          productId: orderItem.productId,
+          productName: product.name,
+          quantity: orderItem.quantity,
+          pricePerUnit: orderItem.pricePerUnit,
+          lineTotal: orderItem.quantity * orderItem.pricePerUnit,
+        }]
+      };
+    },
+    { items: [] as LineItem[], missingProductIds: [] as string[] }
+  );
+  
+  return {
+    items: result.items,
+    missingProductIds: Maybe.fromPredicate(a => a.length > 0, result.missingProductIds)
+  };
 }
 
 export function calculateSubtotal(lineItems: LineItem[]): number {
