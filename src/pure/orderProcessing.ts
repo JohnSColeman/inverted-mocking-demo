@@ -11,7 +11,7 @@
  */
 
 import {Either, EitherAsync, Left, Right} from 'purify-ts';
-import {ProcessedOrder} from '../domain';
+import {Customer, DiscountRule, Order, ProcessedOrder, Product} from '../domain';
 import {AppEffects} from './effects';
 import {
     buildAnalyticsEvent,
@@ -52,6 +52,17 @@ export function processOrder(
             appEffects.pricing.getDiscountRules(),
         ]);
 
+        return doProcessOrder(order, customer, products, discountRules)(appEffects);
+    };
+}
+
+function doProcessOrder(
+    order: Order,
+    customer: Customer,
+    products: Record<string, Product>,
+    discountRules: DiscountRule[]
+): (appEffects: AppEffects) => Promise<Either<unknown[], ProcessedOrder>> {
+    return async (appEffects: AppEffects) => {
         // ========== PURE BUSINESS LOGIC (No Effects) ==========
 
         // Calculate line items and identify missing products
@@ -73,7 +84,7 @@ export function processOrder(
         const cacheEntry = buildCacheEntry(processedOrder);
         const analyticsEvent = buildAnalyticsEvent(processedOrder, customer.tier);
         const missingProductAlerts = missingProductIds
-            .map(ids => buildMissingProductAlerts(orderId, ids));
+            .map(ids => buildMissingProductAlerts(order.id, ids));
 
         // ========== PERFORM OUTPUTS (Effects) ==========
 
@@ -91,8 +102,8 @@ export function processOrder(
         // Execute all effects and return either the failures or the processed order
         const results = await Promise.all(effects.map(e => EitherAsync(e).run()));
         const errors = Either.lefts(results);
-        return errors.length > 0 ? Left(errors)
-            : Right(processedOrder);
+        if (errors.length > 0) return Left(errors);
+        return Right(processedOrder);
     };
 }
 
