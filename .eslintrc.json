@@ -42,7 +42,8 @@
         "functional/no-loop-statements": "error",
         "functional/prefer-immutable-types": "off",
         "functional/no-return-void": "off",
-        "functional/no-expression-statements": "off",
+        "functional/no-expression-statements": "warn",
+        "functional/no-conditional-statements": "warn",
         "functional/functional-parameters": "off"
       }
     },
