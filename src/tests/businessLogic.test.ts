@@ -104,33 +104,33 @@ describe('findApplicableDiscount', () => {
 
   it('finds matching rule for tier and amount', () => {
     const rule = findApplicableDiscount(rules, 'premium', 100);
-    expect(rule?.discountPercent).toBe(10);
+    expect(rule.extract()?.discountPercent).toBe(10);
   });
 
-  it('returns null when no rule matches', () => {
+  it('returns empty Maybe when no rule matches', () => {
     const rule = findApplicableDiscount(rules, 'standard', 50);
-    expect(rule).toBeNull();
+    expect(rule.isNothing()).toBe(true);
   });
 
   it('VIP always gets discount', () => {
     const rule = findApplicableDiscount(rules, 'vip', 1);
-    expect(rule?.discountPercent).toBe(20);
+    expect(rule.extract()?.discountPercent).toBe(20);
   });
 });
 
 describe('calculateDiscount', () => {
   it('applies discount percentage', () => {
     const rule: DiscountRule = { tier: 'premium', minPurchase: 50, discountPercent: 10 };
-    expect(calculateDiscount(100, rule)).toBe(10);
+    expect(calculateDiscount(100, Maybe.of(rule))).toBe(10);
   });
 
   it('returns 0 when no rule', () => {
-    expect(calculateDiscount(100, null)).toBe(0);
+    expect(calculateDiscount(100, Maybe.empty())).toBe(0);
   });
 
   it('handles fractional discounts', () => {
     const rule: DiscountRule = { tier: 'vip', minPurchase: 0, discountPercent: 15 };
-    expect(calculateDiscount(33, rule)).toBeCloseTo(4.95);
+    expect(calculateDiscount(33, Maybe.of(rule))).toBeCloseTo(4.95);
   });
 });
 
@@ -175,7 +175,7 @@ describe('toProcessedOrder', () => {
   it('assembles processed order correctly', () => {
     const discountRule: DiscountRule = { tier: 'premium', minPurchase: 50, discountPercent: 10 };
     
-    const processed = toProcessedOrder(order, customer, lineItems, discountRule);
+    const processed = toProcessedOrder(order, customer, lineItems, Maybe.of(discountRule));
 
     expect(processed.orderId).toBe('order-123');
     expect(processed.customerId).toBe('cust-456');
@@ -186,7 +186,7 @@ describe('toProcessedOrder', () => {
   });
 
   it('handles no discount', () => {
-    const processed = toProcessedOrder(order, customer, lineItems, null);
+    const processed = toProcessedOrder(order, customer, lineItems, Maybe.empty());
 
     expect(processed.subtotal).toBe(100);
     expect(processed.discount).toBe(0);

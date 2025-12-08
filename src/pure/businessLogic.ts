@@ -61,18 +61,20 @@ export function findApplicableDiscount(
   rules: DiscountRule[],
   customerTier: CustomerTier,
   subtotal: number
-): DiscountRule | null {
-  return rules
+): Maybe<DiscountRule> {
+  const discountRule = rules
     .filter(rule => rule.tier === customerTier)
-    .find(rule => subtotal >= rule.minPurchase) ?? null;
+    .find(rule => subtotal >= rule.minPurchase);
+  return Maybe.fromNullable(discountRule);
 }
 
 export function calculateDiscount(
   subtotal: number,
-  rule: DiscountRule | null
+  rule: Maybe<DiscountRule>
 ): number {
-  if (!rule) return 0;
-  return subtotal * (rule.discountPercent / 100);
+  return rule
+    .map(r => subtotal * (r.discountPercent / 100))
+    .orDefault(0);
 }
 
 const loyaltyPointsStrategies: Record<CustomerTier, (basePoints: number) => number> = {
@@ -106,7 +108,7 @@ export function toProcessedOrder(
   order: Order,
   customer: Customer,
   lineItems: LineItem[],
-  discountRule: DiscountRule | null
+  discountRule: Maybe<DiscountRule>
 ): ProcessedOrder {
   const subtotal = calculateSubtotal(lineItems);
   const discount = calculateDiscount(subtotal, discountRule);
