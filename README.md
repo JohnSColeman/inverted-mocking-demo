@@ -164,15 +164,6 @@ result.ifRight(order => console.log('Success:', order));
 result.ifLeft(errors => console.error('Error:', errors));
 ```
 
-**Key Design Decision: Critical vs Optional Effects**
-
-Not all effects are equal! The code distinguishes between:
-
-- **Critical Effects** (inventory, customer updates): Must succeed or the order fails
-- **Optional Effects** (cache, email, analytics): Failures are logged but don't fail the order
-
-This prevents scenarios like "order succeeded but customer didn't get email, so we rolled everything back."
-
 ## Running the Tests
 
 ```bash
