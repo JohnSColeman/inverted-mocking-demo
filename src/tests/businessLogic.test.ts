@@ -38,11 +38,11 @@ describe('calculateLineItems', () => {
       ],
     };
 
-    const { items, missingProductIds } = calculateLineItems(order, products);
+    const { lineItems, missingProductIds } = calculateLineItems(order, products);
 
-    expect(items).toHaveLength(2);
-    expect(items[0]!.lineTotal).toBe(20); // 2 * 10
-    expect(items[1]!.lineTotal).toBe(60); // 3 * 20
+    expect(lineItems).toHaveLength(2);
+    expect(lineItems[0]!.lineTotal).toBe(20); // 2 * 10
+    expect(lineItems[1]!.lineTotal).toBe(60); // 3 * 20
     expect(missingProductIds).toEqual(Maybe.empty());
   });
 
@@ -57,9 +57,9 @@ describe('calculateLineItems', () => {
       ],
     };
 
-    const { items, missingProductIds } = calculateLineItems(order, products);
+    const { lineItems, missingProductIds } = calculateLineItems(order, products);
 
-    expect(items).toHaveLength(1);
+    expect(lineItems).toHaveLength(1);
     expect(missingProductIds).toEqual(Maybe.of(['missing-prod']));
   });
 
@@ -71,9 +71,9 @@ describe('calculateLineItems', () => {
       items: [],
     };
 
-    const { items, missingProductIds } = calculateLineItems(order, products);
+    const { lineItems, missingProductIds } = calculateLineItems(order, products);
 
-    expect(items).toHaveLength(0);
+    expect(lineItems).toHaveLength(0);
     expect(missingProductIds).toBe(Maybe.empty());
   });
 });

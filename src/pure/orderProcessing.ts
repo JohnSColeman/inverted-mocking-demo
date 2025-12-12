@@ -10,7 +10,6 @@
  * logic lives in businessLogic.ts where it's trivially testable.
  */
 
-import {Either, EitherAsync, Left, Right} from 'purify-ts';
 import {Customer, DiscountRule, Order, ProcessedOrder, Product} from '../domain';
 import {AppEffects} from './effects';
 import {
@@ -23,9 +22,23 @@ import {
     findApplicableDiscount,
     toProcessedOrder,
 } from './businessLogic';
+import {Either, EitherAsync, Left, Maybe, Right} from 'purify-ts';
+import {LineItem} from "./types";
+
+type OrderDetails = {
+    order: Order;
+    customer: Customer;
+    products: Record<string, Product>;
+    discountRules: DiscountRule[];
+};
 
 /**
  * Process the given order ID.
+ * Orchestrates the three main steps:
+ * 1. Fetch order details (effects)
+ * 2. Process order (pure business logic)
+ * 3. Finalise order (effects)
+ *
  * @param orderId
  * @return a function to process the order using the given app effects returning
  * either the first effect to fail or the processed order
@@ -33,6 +46,27 @@ import {
 export function processOrder(
     orderId: string
 ): (appEffects: AppEffects) => Promise<Either<unknown[], ProcessedOrder>> {
+    return async (appEffects: AppEffects) => {
+        const orderDetails = await fetchOrderDetails(orderId)(appEffects);
+        return orderDetails.map(details => ({
+            ...details,
+            processedOrder: doProcessOrder(details)
+        })).caseOf({
+            Left: (errors) => Promise.resolve(Left(errors)),
+            Right: (result) =>
+                finaliseOrder(result.customer, result.processedOrder)(appEffects)
+        });
+    };
+}
+
+/**
+ * Fetch the order details required for order processing.
+ * @param orderId
+ * @return either the failures or the gathered input data
+ */
+function fetchOrderDetails(
+    orderId: string
+): (appEffects: AppEffects) => Promise<Either<unknown[], OrderDetails>> {
     return async (appEffects: AppEffects) => {
         // ========== GATHER INPUTS (Effects) ==========
 
@@ -52,42 +86,59 @@ export function processOrder(
             appEffects.pricing.getDiscountRules(),
         ]);
 
-        return doProcessOrder(order, customer, products, discountRules)(appEffects);
+        return Right({order, customer, products, discountRules});
     };
 }
 
+/**
+ * Process order using pure business logic.
+ * Calculates line items, discounts, and builds the processed order.
+ * This function is completely pure - no effects at all.
+ * @return the processed order
+ */
 function doProcessOrder(
-    order: Order,
+    orderDetails: OrderDetails
+): ProcessedOrder & { lineItems: LineItem[], missingProductIds: Maybe<string[]> } {
+    // ========== PURE BUSINESS LOGIC (No Effects) ==========
+
+    // Calculate line items and identify missing products
+    const {lineItems, missingProductIds} = calculateLineItems(orderDetails.order, orderDetails.products);
+
+    // Find applicable discount
+    const discountRule = findApplicableDiscount(
+        orderDetails.discountRules,
+        orderDetails.customer.tier,
+        lineItems.reduce((sum, item) => sum + item.lineTotal, 0)
+    );
+
+    // Build the processed order (all the core calculations happen here)
+    return {
+        ...toProcessedOrder(orderDetails.order, orderDetails.customer, lineItems, discountRule),
+        lineItems,
+        missingProductIds
+    }
+}
+
+/**
+ * Perform all output effects for a processed order.
+ * Executes inventory updates, customer updates, caching, notifications, analytics, and monitoring.
+ * @return either the failures or the processed order
+ */
+function finaliseOrder(
     customer: Customer,
-    products: Record<string, Product>,
-    discountRules: DiscountRule[]
+    processedOrder: ProcessedOrder & { lineItems: LineItem[], missingProductIds: Maybe<string[]> },
 ): (appEffects: AppEffects) => Promise<Either<unknown[], ProcessedOrder>> {
     return async (appEffects: AppEffects) => {
-        // ========== PURE BUSINESS LOGIC (No Effects) ==========
+        // ========== PREPARE ALL OUTPUT DATA ==========
 
-        // Calculate line items and identify missing products
-        const {items: lineItems, missingProductIds} = calculateLineItems(order, products);
-
-        // Find applicable discount
-        const discountRule = findApplicableDiscount(
-            discountRules,
-            customer.tier,
-            lineItems.reduce((sum, item) => sum + item.lineTotal, 0)
-        );
-
-        // Build the processed order (all the core calculations happen here)
-        const processedOrder = toProcessedOrder(order, customer, lineItems, discountRule);
-
-        // Prepare all output data
-        const inventoryUpdates = calculateInventoryUpdates(lineItems);
+        const inventoryUpdates = calculateInventoryUpdates(processedOrder.lineItems);
         const emailPayload = buildConfirmationEmail(customer, processedOrder);
         const cacheEntry = buildCacheEntry(processedOrder);
         const analyticsEvent = buildAnalyticsEvent(processedOrder, customer.tier);
-        const missingProductAlerts = missingProductIds
-            .map(ids => buildMissingProductAlerts(order.id, ids));
+        const missingProductAlerts = processedOrder.missingProductIds
+            .map(ids => buildMissingProductAlerts(processedOrder.orderId, ids));
 
         // ========== PERFORM OUTPUTS (Effects) ==========
-
         const effects = [
             () => appEffects.products.updateInventory(inventoryUpdates),
             () => appEffects.customers.updateTotalPurchases(customer.id, processedOrder.total),
@@ -102,8 +153,7 @@ function doProcessOrder(
         // Execute all effects and return either the failures or the processed order
         const results = await Promise.all(effects.map(e => EitherAsync(e).run()));
         const errors = Either.lefts(results);
-        if (errors.length > 0) return Left(errors);
-        return Right(processedOrder);
+        return errors.length ? Left(errors) : Right(processedOrder);
     };
 }
 

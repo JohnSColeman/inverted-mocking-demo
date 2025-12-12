@@ -21,7 +21,7 @@ import {Maybe} from "purify-ts";
 export function calculateLineItems(
   order: Order,
   products: Record<string, Product>
-): { items: LineItem[]; missingProductIds: Maybe<string[]> } {
+): { lineItems: LineItem[]; missingProductIds: Maybe<string[]> } {
   const result = order.items.reduce(
     (acc, orderItem) => {
       const product = products[orderItem.productId];
@@ -48,7 +48,7 @@ export function calculateLineItems(
   );
   
   return {
-    items: result.items,
+    lineItems: result.items,
     missingProductIds: Maybe.fromPredicate(a => a.length > 0, result.missingProductIds)
   };
 }
