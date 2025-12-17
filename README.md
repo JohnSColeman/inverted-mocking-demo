@@ -163,6 +163,10 @@ const result = await processOrder('order-123')(effects);
 result.ifRight(order => console.log('Success:', order));
 result.ifLeft(errors => console.error('Error:', errors));
 ```
+Note that the project code is more structured and segregates effect failures from business logic failures by
+throwing for effect failures and using the left Either condition to handle business logic errors. NonEmptyList
+allows for multiple business logic failures to return and is useful for form validation, although in this case it
+is only conventional and not exploited.
 
 ## Running the Tests
 

@@ -15,7 +15,7 @@ import {processOrder} from '../pure/orderProcessing';
 import type {AppEffects} from '../pure/effects';
 import {Activities} from './activities';
 import {ActivityOptions, proxyActivities} from '@temporalio/workflow';
-import {Either} from 'purify-ts';
+import {Either, NonEmptyList} from 'purify-ts';
 
 const databaseActivityOptions: ActivityOptions = {
   startToCloseTimeout: '120s',
@@ -97,7 +97,7 @@ const {
  * This workflow adapts the flattened activities back to the AppEffects structure
  * expected by the pure business logic.
  */
-export async function processOrderWorkflow(orderId: string): Promise<Either<unknown[], ProcessedOrder>> {
+export async function processOrderWorkflow(orderId: string): Promise<Either<NonEmptyList<string>, ProcessedOrder>> {
   // Adapt flattened activities back to the AppEffects structure
   // This maintains the separation between business logic and Temporal specifics
   // Each activity uses its appropriate retry policy based on the proxy it came from

@@ -22,15 +22,18 @@ import {
     findApplicableDiscount,
     toProcessedOrder,
 } from './businessLogic';
-import {Either, EitherAsync, Left, Maybe, Right} from 'purify-ts';
 import {LineItem} from "./types";
+import {EffectsError} from "../effects/EffectsError";
+import {Either, EitherAsync, Left, Maybe, NonEmptyList, Right} from 'purify-ts';
 
 type OrderDetails = {
-    order: Order;
-    customer: Customer;
-    products: Record<string, Product>;
-    discountRules: DiscountRule[];
+    readonly order: Order;
+    readonly customer: Customer;
+    readonly products: Record<string, Product>;
+    readonly discountRules: DiscountRule[];
 };
+
+type ProcessedOrderWithLineItems = ProcessedOrder & {lineItems: LineItem[], missingProductIds: Maybe<string[]>}
 
 /**
  * Process the given order ID.
@@ -41,20 +44,26 @@ type OrderDetails = {
  *
  * @param orderId
  * @return a function to process the order using the given app effects returning
- * either the first effect to fail or the processed order
+ * either the business logic errors or the successfully processed order
+ * @throws EffectsError
  */
 export function processOrder(
     orderId: string
-): (appEffects: AppEffects) => Promise<Either<unknown[], ProcessedOrder>> {
+): (appEffects: AppEffects) => Promise<Either<NonEmptyList<string>, ProcessedOrder>> {
     return async (appEffects: AppEffects) => {
+        // synchronously perform the initial steps - this can fail fast when effects throw
         const orderDetails = await fetchOrderDetails(orderId)(appEffects);
-        return orderDetails.map(details => ({
+        const processedOrder = orderDetails.map(details => ({
             ...details,
             processedOrder: doProcessOrder(details)
-        })).caseOf({
+        }));
+        // return either lifting business logic failures into Promise or lifting final effect into Right
+        return processedOrder.caseOf({
             Left: (errors) => Promise.resolve(Left(errors)),
-            Right: (result) =>
-                finaliseOrder(result.customer, result.processedOrder)(appEffects)
+            Right: async (result) => {
+                const processedOrder = await finaliseOrder(result.customer, result.processedOrder)(appEffects)
+                return Right(processedOrder);
+            }
         });
     };
 }
@@ -66,18 +75,18 @@ export function processOrder(
  */
 function fetchOrderDetails(
     orderId: string
-): (appEffects: AppEffects) => Promise<Either<unknown[], OrderDetails>> {
+): (appEffects: AppEffects) => Promise<Either<NonEmptyList<string>, OrderDetails>> {
     return async (appEffects: AppEffects) => {
         // ========== GATHER INPUTS (Effects) ==========
 
         const order = await appEffects.orders.getById(orderId);
         if (!order) {
-            return Left([`Order ${orderId} not found`]);
+            return Left(NonEmptyList([`Order ${orderId} not found`]));
         }
 
         const customer = await appEffects.customers.getById(order.customerId);
         if (!customer) {
-            return Left([`Customer ${order.customerId} not found`]);
+            return Left(NonEmptyList([`Customer ${order.customerId} not found`]));
         }
 
         const productIds = order.items.map(item => item.productId);
@@ -98,7 +107,7 @@ function fetchOrderDetails(
  */
 function doProcessOrder(
     orderDetails: OrderDetails
-): ProcessedOrder & { lineItems: LineItem[], missingProductIds: Maybe<string[]> } {
+): ProcessedOrderWithLineItems {
     // ========== PURE BUSINESS LOGIC (No Effects) ==========
 
     // Calculate line items and identify missing products
@@ -122,12 +131,12 @@ function doProcessOrder(
 /**
  * Perform all output effects for a processed order.
  * Executes inventory updates, customer updates, caching, notifications, analytics, and monitoring.
- * @return either the failures or the processed order
+ * @return the processed order
  */
 function finaliseOrder(
     customer: Customer,
     processedOrder: ProcessedOrder & { lineItems: LineItem[], missingProductIds: Maybe<string[]> },
-): (appEffects: AppEffects) => Promise<Either<unknown[], ProcessedOrder>> {
+): (appEffects: AppEffects) => Promise<ProcessedOrder> {
     return async (appEffects: AppEffects) => {
         // ========== PREPARE ALL OUTPUT DATA ==========
 
@@ -150,10 +159,12 @@ function finaliseOrder(
                 .orDefault([])
         ];
 
-        // Execute all effects and return either the failures or the processed order
+        // Execute all effects and throw the failures or return the processed order
         const results = await Promise.all(effects.map(e => EitherAsync(e).run()));
-        const errors = Either.lefts(results);
-        return errors.length ? Left(errors) : Right(processedOrder);
+        const errors = Either.lefts(results)
+            .map(err => (err instanceof Error) ? err : new Error(String(err)));
+        if (errors.length) throw new EffectsError(errors);
+        return processedOrder;
     };
 }
 

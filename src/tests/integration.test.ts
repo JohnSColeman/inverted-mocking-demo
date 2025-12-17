@@ -197,7 +197,7 @@ describe('processOrder integration', () => {
     ]);
   });
 
-  it('returns Left when inventory update fails', async () => {
+  it('throws error when inventory update fails', async () => {
     const effects = createMockEffects({
       products: {
         getByIds: jest.fn().mockResolvedValue(testProducts),
@@ -205,14 +205,10 @@ describe('processOrder integration', () => {
       },
     });
 
-    const result = await processOrder('order-123')(effects);
-    
-    expect(result.isLeft()).toBe(true);
-    // Error is returned - specific message format may vary
-    expect(result.extract()).toBeTruthy();
+    await expect(processOrder('order-123')(effects)).rejects.toThrow('Inventory service unavailable');
   });
 
-  it('returns Left when customer update fails', async () => {
+  it('throws error when customer update fails', async () => {
     const effects = createMockEffects({
       customers: {
         getById: jest.fn().mockResolvedValue(testCustomer),
@@ -220,41 +216,27 @@ describe('processOrder integration', () => {
       },
     });
 
-    const result = await processOrder('order-123')(effects);
-    
-    expect(result.isLeft()).toBe(true);
-    // Error is returned - specific message format may vary
-    expect(result.extract()).toBeTruthy();
+    await expect(processOrder('order-123')(effects)).rejects.toThrow('Customer service down');
   });
 
-  it('returns Left when email sending fails', async () => {
+  it('throws error when email sending fails', async () => {
     const effects = createMockEffects({
       notifications: {
         sendEmail: jest.fn().mockRejectedValue(new Error('Email service down')),
       },
     });
 
-    const result = await processOrder('order-123')(effects);
-    
-    // All effects must succeed
-    expect(result.isLeft()).toBe(true);
-    // Error is returned - specific message format may vary
-    expect(result.extract()).toBeTruthy();
+    await expect(processOrder('order-123')(effects)).rejects.toThrow('Email service down');
   });
 
-  it('returns Left when cache operation fails', async () => {
+  it('throws error when cache operation fails', async () => {
     const effects = createMockEffects({
       cache: {
         set: jest.fn().mockRejectedValue(new Error('Cache unavailable')),
       },
     });
 
-    const result = await processOrder('order-123')(effects);
-    
-    // All effects must succeed
-    expect(result.isLeft()).toBe(true);
-    // Error is returned - specific message format may vary
-    expect(result.extract()).toBeTruthy();
+    await expect(processOrder('order-123')(effects)).rejects.toThrow('Cache unavailable');
   });
 });
 

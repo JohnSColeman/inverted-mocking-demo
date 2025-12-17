@@ -1,6 +1,6 @@
 // Module product types
 
-import {Customer} from "../domain";
+import {CustomerTier} from "../domain";
 
 export type LineItem = {
     readonly productId: string;
@@ -19,7 +19,7 @@ export type AnalyticsEvent = {
     readonly event: string;
     readonly orderId: string;
     readonly total: number;
-    readonly customerTier: Customer['tier'];
+    readonly customerTier: CustomerTier;
 };
 
 export type MissingProductAlert = {

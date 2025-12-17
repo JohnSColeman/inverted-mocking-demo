@@ -8,15 +8,15 @@
 
 import {Customer, DiscountRule, Order, Product} from '../domain';
 import {
-  buildConfirmationEmail,
-  buildMissingProductAlerts,
-  calculateDiscount,
-  calculateInventoryUpdates,
-  calculateLineItems,
-  calculateLoyaltyPoints,
-  calculateSubtotal,
-  findApplicableDiscount,
-  toProcessedOrder,
+    buildConfirmationEmail,
+    buildMissingProductAlerts,
+    calculateDiscount,
+    calculateInventoryUpdates,
+    calculateLineItems,
+    calculateLoyaltyPoints,
+    calculateSubtotal,
+    findApplicableDiscount,
+    toProcessedOrder,
 } from '../pure/businessLogic';
 import {Maybe} from "purify-ts";
 
